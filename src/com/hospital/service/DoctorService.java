@@ -1,36 +1,29 @@
 package com.hospital.service;
 
+import com.hospital.dao.DoctorDAO;
 import com.hospital.model.Doctor;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
+
 import java.util.List;
-import java.util.Map;
 
 /**
- * Service managing Doctor onboarding, schedules, and search.
+ * Service managing Doctor onboarding & search, delegating persistence to DoctorDAO.
  */
 public class DoctorService {
-    private final Map<String, Doctor> doctorMap = new LinkedHashMap<>();
+    private final DoctorDAO doctorDAO = new DoctorDAO();
 
     public void registerDoctor(Doctor doctor) {
-        doctorMap.put(doctor.getId(), doctor);
+        doctorDAO.save(doctor);
     }
 
     public Doctor getDoctorById(String id) {
-        return doctorMap.get(id);
+        return doctorDAO.findById(id);
     }
 
     public List<Doctor> getAllDoctors() {
-        return new ArrayList<>(doctorMap.values());
+        return doctorDAO.findAll();
     }
 
     public List<Doctor> getDoctorsBySpecialization(String specialization) {
-        List<Doctor> result = new ArrayList<>();
-        for (Doctor d : doctorMap.values()) {
-            if (d.getSpecialization().equalsIgnoreCase(specialization)) {
-                result.add(d);
-            }
-        }
-        return result;
+        return doctorDAO.findBySpecialization(specialization);
     }
 }

@@ -1,45 +1,33 @@
 package com.hospital.service;
 
+import com.hospital.dao.PatientDAO;
 import com.hospital.model.Patient;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
+
 import java.util.List;
-import java.util.Map;
 
 /**
- * Service managing Patient business operations and storage.
+ * Service managing Patient business operations, delegating persistence to PatientDAO.
  */
 public class PatientService {
-    private final Map<String, Patient> patientMap = new LinkedHashMap<>();
+    private final PatientDAO patientDAO = new PatientDAO();
 
     public void registerPatient(Patient patient) {
-        patientMap.put(patient.getId(), patient);
+        patientDAO.save(patient);
     }
 
     public Patient getPatientById(String id) {
-        return patientMap.get(id);
+        return patientDAO.findById(id);
     }
 
     public List<Patient> getAllPatients() {
-        return new ArrayList<>(patientMap.values());
+        return patientDAO.findAll();
     }
 
     public boolean addMedicalRecord(String patientId, String record) {
-        Patient patient = getPatientById(patientId);
-        if (patient != null) {
-            patient.addMedicalRecord(record);
-            return true;
-        }
-        return false;
+        return patientDAO.addMedicalRecord(patientId, record);
     }
 
     public List<Patient> searchPatientsByName(String nameQuery) {
-        List<Patient> results = new ArrayList<>();
-        for (Patient p : patientMap.values()) {
-            if (p.getName().toLowerCase().contains(nameQuery.toLowerCase())) {
-                results.add(p);
-            }
-        }
-        return results;
+        return patientDAO.searchByName(nameQuery);
     }
 }

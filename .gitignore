@@ -2,6 +2,9 @@
 *.class
 bin/
 
+# SQLite Database Files
+*.db
+
 # IDE / Editor files
 .vscode/
 .idea/

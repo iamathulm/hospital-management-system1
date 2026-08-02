@@ -1,49 +1,37 @@
 package com.hospital.service;
 
+import com.hospital.dao.BillDAO;
 import com.hospital.model.Bill;
 import com.hospital.util.IdGenerator;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
+
 import java.util.List;
-import java.util.Map;
 
 /**
- * Service managing invoice creation, payment updates, and billing history.
+ * Service managing Invoice creation & payments, delegating persistence to BillDAO.
  */
 public class BillingService {
-    private final Map<String, Bill> billMap = new LinkedHashMap<>();
+    private final BillDAO billDAO = new BillDAO();
 
     public Bill createBill(String appointmentId, String patientId, double consultationFee, double medicationFee, double roomCharges) {
         String billId = IdGenerator.generateBillId();
         Bill bill = new Bill(billId, appointmentId, patientId, consultationFee, medicationFee, roomCharges);
-        billMap.put(billId, bill);
+        billDAO.save(bill);
         return bill;
     }
 
     public Bill getBillById(String billId) {
-        return billMap.get(billId);
+        return billDAO.findById(billId);
     }
 
     public List<Bill> getAllBills() {
-        return new ArrayList<>(billMap.values());
+        return billDAO.findAll();
     }
 
     public List<Bill> getBillsByPatient(String patientId) {
-        List<Bill> list = new ArrayList<>();
-        for (Bill b : billMap.values()) {
-            if (b.getPatientId().equalsIgnoreCase(patientId)) {
-                list.add(b);
-            }
-        }
-        return list;
+        return billDAO.findByPatientId(patientId);
     }
 
     public boolean processPayment(String billId) {
-        Bill bill = getBillById(billId);
-        if (bill != null && !bill.isPaid()) {
-            bill.setPaid(true);
-            return true;
-        }
-        return false;
+        return billDAO.markPaid(billId);
     }
 }

@@ -1,5 +1,6 @@
 package com.hospital;
 
+import com.hospital.db.DatabaseManager;
 import com.hospital.model.*;
 import com.hospital.service.*;
 import com.hospital.util.IdGenerator;
@@ -9,7 +10,7 @@ import java.util.List;
 import java.util.Scanner;
 
 /**
- * Main application class driving the Hospital Management System CLI.
+ * Main application class driving the Hospital Management System CLI with SQLite SQL Persistence.
  */
 public class Main {
 
@@ -20,13 +21,22 @@ public class Main {
     private final Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
+        // Initialize SQLite Database and Tables
+        DatabaseManager.initializeDatabase();
+
         Main app = new Main();
-        app.seedSampleData();
+        
+        // Seed initial data only if the database is currently empty
+        if (app.doctorService.getAllDoctors().isEmpty()) {
+            System.out.println("🌱 Seeding initial sample data into SQLite database...");
+            app.seedSampleData();
+        }
+
         app.run();
     }
 
     /**
-     * Seeds initial sample data for quick demonstration and testing.
+     * Seeds initial sample data into SQLite database if empty.
      */
     private void seedSampleData() {
         // Register Sample Doctors
@@ -45,12 +55,12 @@ public class Main {
         Patient p1 = new Patient(IdGenerator.generatePatientId(), "John Doe", 35, "Male", "555-1122", "O+");
         Patient p2 = new Patient(IdGenerator.generatePatientId(), "Emily Watson", 28, "Female", "555-3344", "A+");
 
-        p1.addMedicalRecord("Initial Consultation - Routine Checkup (2025-10-10)");
-        p1.addMedicalRecord("Prescribed Vitamin D3 supplements");
-        p2.addMedicalRecord("Treated for Seasonal Allergies (2026-01-15)");
-
         patientService.registerPatient(p1);
         patientService.registerPatient(p2);
+
+        patientService.addMedicalRecord(p1.getId(), "Initial Consultation - Routine Checkup (2025-10-10)");
+        patientService.addMedicalRecord(p1.getId(), "Prescribed Vitamin D3 supplements");
+        patientService.addMedicalRecord(p2.getId(), "Treated for Seasonal Allergies (2026-01-15)");
 
         // Create Sample Appointment
         Appointment apt1 = new Appointment(IdGenerator.generateAppointmentId(), p1.getId(), d1.getId(),
@@ -64,12 +74,12 @@ public class Main {
         appointmentService.bookAppointment(apt2);
 
         Bill bill1 = billingService.createBill(apt2.getAppointmentId(), p2.getId(), d2.getConsultationFee(), 35.0, 0.0);
-        bill1.setPaid(true);
+        billingService.processPayment(bill1.getBillId());
     }
 
     public void run() {
         System.out.println("==================================================");
-        System.out.println("   🏥 WELCOME TO PURE JAVA HOSPITAL SYSTEM 🏥   ");
+        System.out.println(" 🏥 WELCOME TO PURE JAVA HOSPITAL SYSTEM (SQL) 🏥");
         System.out.println("==================================================");
 
         while (true) {
@@ -155,14 +165,14 @@ public class Main {
         String patientId = IdGenerator.generatePatientId();
         Patient p = new Patient(patientId, name, age, gender, phone, blood);
         patientService.registerPatient(p);
-        System.out.println("✅ Patient registered successfully! Generated ID: " + patientId);
+        System.out.println("✅ Patient registered in SQL database! Generated ID: " + patientId);
     }
 
     private void viewAllPatients() {
         System.out.println("\n--- 📋 Registered Patients ---");
         List<Patient> patients = patientService.getAllPatients();
         if (patients.isEmpty()) {
-            System.out.println("No patients found.");
+            System.out.println("No patients found in database.");
             return;
         }
         for (Patient p : patients) {
@@ -253,7 +263,7 @@ public class Main {
         String docId = IdGenerator.generateDoctorId();
         Doctor doc = new Doctor(docId, name, age, gender, phone, spec, qual, fee, slot);
         doctorService.registerDoctor(doc);
-        System.out.println("✅ Doctor registered successfully! Generated ID: " + docId);
+        System.out.println("✅ Doctor registered in SQL database! Generated ID: " + docId);
     }
 
     private void viewAllDoctors() {
@@ -341,7 +351,7 @@ public class Main {
         appointmentService.bookAppointment(appointment);
         patient.setAssignedDoctorId(did);
 
-        System.out.println("✅ Appointment booked successfully! Appointment ID: " + aptId);
+        System.out.println("✅ Appointment booked in SQL database! Appointment ID: " + aptId);
     }
 
     private void viewAllAppointments() {
@@ -383,7 +393,7 @@ public class Main {
         }
 
         appointmentService.updateStatus(aptId, AppointmentStatus.COMPLETED);
-        System.out.println("✅ Appointment " + aptId + " marked as COMPLETED.");
+        System.out.println("✅ Appointment " + aptId + " marked as COMPLETED in SQL database.");
     }
 
     private void cancelAppointment() {
@@ -395,7 +405,7 @@ public class Main {
         }
 
         appointmentService.updateStatus(aptId, AppointmentStatus.CANCELLED);
-        System.out.println("✅ Appointment " + aptId + " CANCELLED.");
+        System.out.println("✅ Appointment " + aptId + " CANCELLED in SQL database.");
     }
 
     // ================= BILLING & INVOICES =================
@@ -445,7 +455,7 @@ public class Main {
         double roomCharges = InputValidator.readDouble(scanner, "Enter Room/Facility Charges ($): ", 0.0);
 
         Bill bill = billingService.createBill(aptId, apt.getPatientId(), consultationFee, medFee, roomCharges);
-        System.out.println("✅ Bill generated successfully! Bill ID: " + bill.getBillId());
+        System.out.println("✅ Bill saved to SQL database! Bill ID: " + bill.getBillId());
         System.out.println("Total Amount Due: $" + String.format("%.2f", bill.getTotalAmount()));
     }
 
@@ -465,7 +475,7 @@ public class Main {
         String billId = InputValidator.readNonEmptyString(scanner, "Enter Bill ID to Pay: ");
         boolean success = billingService.processPayment(billId);
         if (success) {
-            System.out.println("✅ Payment processed successfully for Bill ID: " + billId);
+            System.out.println("✅ Payment processed & updated in SQL database for Bill ID: " + billId);
         } else {
             Bill bill = billingService.getBillById(billId);
             if (bill == null) {
